@@ -1,0 +1,406 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .project-detail .list-group{
+        padding: .24rem;
+    }
+    .project-detail .list-group .list-item{
+        display: flex;
+        line-height: 1rem;
+        padding: 0 .2rem;
+        background-color: #f5f5f5;
+        border-bottom: 1px dashed #e8e8e8;
+    }
+    .project-detail .list-group .list-item .left{
+        width: 80px;
+    }
+    .project-detail .list-group .list-item .right{
+        text-align: right;
+        flex: 1;
+        word-break: normal;
+    }
+
+    .project-detail .rules-title{
+        padding: 10px 15px;
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .project-detail .project-flow .iconfont{
+        color: #0bb20c;
+        font-size: .44rem;
+    }
+    .project-detail .project-flow .icon-gantanhao{
+        color: #ef4f4f;
+    }
+    .project-detail .project-flow .icon-shijian{
+        color: #ffb400;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div class="project-detail" id="app" v-cloak>
+
+    <!-- 基本信息 -->
+    <yd-preview :buttons="[]">
+        <yd-preview-header>
+            <div slot="left">客户名称</div>
+            <div slot="right">{{detail.customer}}</div>
+        </yd-preview-header>
+        <yd-preview-item>
+            <div slot="left">申请人</div>
+            <div slot="right">{{detail.name}}</div>
+        </yd-preview-item>
+        <yd-preview-item>
+            <div slot="left">申请日期</div>
+            <div slot="right">{{detail.time}}</div>
+        </yd-preview-item>
+        <yd-preview-item>
+            <div slot="left">单号</div>
+            <div slot="right">{{detail.applyCode}}</div>
+        </yd-preview-item>
+        <yd-preview-item>
+            <div slot="left">技术员</div>
+            <div slot="right">
+                <span v-for="appoint in detail.appoint"> {{appoint.name}}</span>
+            </div>
+        </yd-preview-item>
+        <yd-preview-item>
+            <div slot="left">当前状态</div>
+            <div slot="right">
+                <yd-button v-if="detail.status == 0 || detail.status == 1" @click.native.stop="approveVisible = true" type="primary" shape="circle">等待审批中</yd-button>
+                <yd-button v-if="detail.status == 3 || detail.status == 4" @click.native.stop="approveVisible = true" type="danger" shape="circle">审批被拒绝</yd-button>
+                <yd-button v-if="detail.progress == 1" @click.native.stop="appoint()" type="primary" shape="circle">等待指派人员</yd-button>
+                <yd-button v-if="detail.progress == 2" type="primary" shape="circle">客户电话沟通</yd-button>
+                <yd-button v-if="detail.progress == 3" type="primary" shape="circle">计划安排</yd-button>
+                <yd-button v-if="detail.progress == 4" type="primary" shape="circle">借用设备申请</yd-button>
+                <yd-button v-if="detail.progress == 5" type="primary" shape="circle">等待确定出发日期</yd-button>
+                <yd-button v-if="detail.progress == 6" type="primary" shape="circle">现场问题沟通确认</yd-button>
+                <yd-button v-if="detail.progress == 7" type="primary" shape="circle">技术支持进行</yd-button>
+                <yd-button v-if="detail.progress == 8" type="primary" shape="circle">反馈销售确认结束</yd-button>
+                <yd-button v-if="detail.progress == 9" @click.native.stop="saleConfirm()" type="primary" shape="circle">等待销售确认结束</yd-button>
+                <yd-button v-if="detail.progress == 10" type="primary" shape="circle">确定返程日期</yd-button>
+                <yd-button v-if="detail.progress == 11" type="primary" shape="circle">财务报销</yd-button>
+                <yd-button v-if="detail.progress == 12" type="primary" shape="circle">项目总结</yd-button>
+                <yd-button v-if="detail.progress == 13" type="danger" shape="circle">已结项</yd-button>
+            </div>
+        </yd-preview-item>
+
+    </yd-preview>
+
+    <!-- 详细信息 -->
+    <yd-accordion style="margin-top: 10px;">
+        <yd-accordion-item title="客户信息">
+            <div class="list-group">
+                <div class="list-item">
+                    <div class="left">销售单号</div>
+                    <div class="right">{{detail.code}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">客户名称</div>
+                    <div class="right">{{detail.customer}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">单位名称</div>
+                    <div class="right">{{detail.company}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">前往地点</div>
+                    <div class="right">{{detail.place}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">详细地址</div>
+                    <div class="right">{{detail.address}}</div>
+                </div>
+                <div class="list-item" v-for="item in detail.contact">
+                    <div class="left">联系人</div>
+                    <div class="right">{{item.name}} - {{item.tel}}</div>
+                </div>
+            </div>
+        </yd-accordion-item>
+        <yd-accordion-item title="服务内容">
+            <div class="list-group">
+                <div class="list-item">
+                    <div class="left">服务类型</div>
+                    <div class="right">{{detail.type}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">单位数量</div>
+                    <div class="right">{{detail.number}}</div>
+                </div>
+                <div class="list-item" v-for="item in detail.device">
+                    <div class="left">设备名称/数量</div>
+                    <div class="right">{{item.name}} / {{item.number}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">备注说明</div>
+                    <div class="right">{{detail.remark}}</div>
+                </div>
+            </div>
+        </yd-accordion-item>
+        <yd-accordion-item title="预收费用">
+            <div class="list-group">
+                <div class="list-item">
+                    <div class="left">服务天数</div>
+                    <div class="right">{{detail.days}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">服务人数</div>
+                    <div class="right">{{detail.peoples}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">交通费</div>
+                    <div class="right">{{detail.traffic}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">住宿费（单日）</div>
+                    <div class="right">{{detail.stayCharge}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">服务费（单日）</div>
+                    <div class="right">{{detail.serviceCharge}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">合计</div>
+                    <div class="right">￥{{detail.days * detail.peoples * (Number(detail.stayCharge) + Number(detail.serviceCharge)) + Number(detail.traffic * 2)}}</div>
+                </div>
+            </div>
+        </yd-accordion-item>
+    </yd-accordion>
+
+    <!-- 项目流程 -->
+    <div class="project-flow">
+        <div class="flow-item" v-if="detail.progress < 13">
+            <div class="rules-title" style="color: #ef4f4f;">当前状态</div>
+            <yd-cell-group>
+                <yd-cell-item arrow type="a"
+                    :href="'/index/project/flow'+ Number(i+1) + '?id='+detail.id"
+                    v-for="(item, i) in detail.flowList"
+                    v-if="item.status == 2">
+                    <i class="iconfont icon-gantanhao" slot="icon"></i>
+                    <span slot="left">{{item.name}}</span>
+                </yd-cell-item>
+            </yd-cell-group>
+        </div>
+
+        <div class="flow-item" v-if="detail.progress < 12">
+            <div class="rules-title">剩余任务</div>
+            <yd-cell-group>
+                <yd-cell-item arrow type="a"
+                    href="javascript:;"
+                    v-for="(item, i) in detail.flowList"
+                    v-if="item.status == 3">
+                    <i class="iconfont icon-shijian" slot="icon"></i>
+                    <span slot="left">{{item.name}}</span>
+                </yd-cell-item>
+            </yd-cell-group>
+        </div>
+
+        <div class="flow-item">
+            <div class="rules-title">已结束任务</div>
+            <yd-cell-group>
+                <yd-cell-item arrow type="a"
+                    :href="'/index/project/flow'+ Number(i+1) + '?id='+detail.id + '&done=1'"
+                    v-for="(item, i) in detail.flowList"
+                    v-if="item.status == 1">
+                    <i class="iconfont icon-zhengque" slot="icon"></i>
+                    <span slot="left">{{item.name}}</span>
+                </yd-cell-item>
+            </yd-cell-group>
+        </div>
+    </div>
+
+    <!-- 审批进度 -->
+    <yd-popup v-model="approveVisible" position="center" width="90%">
+        <div style="margin: 10px 0;text-align: center;font-size: 16px;">审批流程</div>
+        <yd-timeline>
+            <yd-timeline-item>
+                <p>审批人：销售总监</p>
+                <p>
+                    审批结果：
+                    <span v-if="approveStatus == 0">未审批</span>
+                    <span v-if="approveStatus == 1 || approveStatus == 2">同意</span>
+                    <span v-if="approveStatus == 3">拒绝</span>
+                </p>
+                <!--<p>审批时间：2017-08-18 08:24:18</p>-->
+            </yd-timeline-item>
+            <yd-timeline-item>
+                <p>审批人：财务</p>
+                <p>
+                    审批结果：
+                    <span v-if="approveStatus == 0 || approveStatus == 1 || approveStatus == 3">未审批</span>
+                    <span v-if="approveStatus == 2">同意</span>
+                    <span v-if="approveStatus == 4">拒绝</span>
+                </p>
+                <!--<p>审批时间：2017-08-18 08:24:18</p>-->
+            </yd-timeline-item>
+        </yd-timeline>
+    </yd-popup>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            detail: {},
+
+            // 当前审批状态
+            approveStatus: 0,
+            approveVisible: false,
+        },
+        created: function () {
+            var self = this;
+            self.$dialog.loading.open('加载中');
+
+            ding.ready(function(){
+                ding.getUserInfo(function(resp){
+                    self.userInfo = resp.data;
+                    self.getData();
+                    self.$dialog.loading.close();
+                });
+            });
+        },
+        methods: {
+            // 销售确认结束
+            saleConfirm: function () {
+                var self = this;
+
+                if (self.userInfo.auth !== 1) {
+                    self.$dialog.toast({
+                        mes: '请等待销售确认结束',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                self.$dialog.confirm({
+                    title: '确认结束',
+                    mes: '',
+                    opts: function () {
+                        axios.post('/api/invoice/saleConfirm', Qs.stringify({
+                            id: self.detail.id,
+                            progress: 10
+                        }),{
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                        }).then(function(resp) {
+                            if (resp.data.ret) {
+                                self.detail.progress = 10;
+                                self.$dialog.toast({
+                                    mes: resp.data.msg,
+                                    timeout: 1500,
+                                    icon: 'success'
+                                });
+                            } else {
+                                self.$dialog.toast({
+                                    mes: resp.data.msg,
+                                    timeout: 1500,
+                                    icon: 'error'
+                                });
+                            }
+                        })
+                    }
+                });
+            },
+            // 指派 （技术经理权限）
+            appoint: function () {
+                var self = this;
+                if (self.userInfo.auth !== 4) {
+                    self.$dialog.confirm({
+                        title: '发送钉消息给技术经理',
+                        mes: '',
+                        opts: function () {
+                            ding.sendDing({
+                                userId: [ding.technicalManagerUserId],
+                                url: location.origin + '/index/project/',
+                                text: '有技术申请需要您指派人员'
+                            }, function () {
+                                self.$dialog.toast({
+                                    mes: '发送成功',
+                                    timeout: 1500,
+                                    icon: 'success'
+                                });
+                            });
+                        }
+                    });
+                    return;
+                }
+
+                self.curData = self.detail;
+                ding.chooseContactAndDepartments(function (resp) {
+                    var appoint = resp.users;
+                    var appointIds = [];
+                    appoint.forEach(function (item) {
+                        appointIds.push(item.emplId)
+                    });
+
+                    axios.post('/api/invoice/appoint', Qs.stringify({
+                        id: self.curData.id,
+                        appoint: appoint,
+                        appointIds: appointIds
+                    }), {
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                    }).then(function (resp) {
+                        if (resp.data.ret) {
+                            self.$dialog.toast({
+                                mes: resp.data.msg,
+                                timeout: 1500,
+                                icon: 'success',
+                                callback: function () {
+                                    ding.sendDing({
+                                        userId: appointIds,
+                                        url: location.origin + '/index/project/',
+                                        text: '技术经理给你指派新项目了'
+                                    }, function () {
+                                        self.$dialog.toast({
+                                            mes: '发送成功',
+                                            timeout: 1500,
+                                            icon: 'success'
+                                        });
+                                    });
+                                }
+                            });
+                        } else {
+                            self.$dialog.toast({
+                                mes: resp.data.msg,
+                                timeout: 1500,
+                                icon: 'error'
+                            });
+                        }
+                    })
+                })
+            },
+            goDetail: function (item) {
+                location.href = '/index/project/detail?id=' + item.id;
+            },
+            approvePopup: function (item) {
+                this.approveStatus = item.status;
+                this.approveVisible = true;
+            },
+            getData: function() {
+                var self = this;
+                axios.get('/api/invoice/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.detail = resp.data.data;
+                    }else{
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        }
+    })
+</script>
+{/block}

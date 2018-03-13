@@ -1,0 +1,284 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .support-dispatch{
+        padding-top: 1rem;
+        padding-bottom: 90px;
+    }
+    .support-dispatch .yd-preview{
+        border-bottom: 10px solid #f5f5f5;
+    }
+    .support-dispatch .btn-add{
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+        background-color: #ffffff;
+        z-index: 1000;
+    }
+    .support-dispatch .btn-add .yd-btn-block{
+        margin-top: 0;
+    }
+    .support-dispatch .yd-popup .yd-cell-box{
+        margin: 0;
+    }
+    .fixed-top{
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="support-dispatch" v-cloak>
+    <div class="fixed-top">
+        <yd-tab active-color="#3296fa" :callback="tab">
+            <yd-tab-panel label="未报销" active tabkey="0"></yd-tab-panel>
+            <yd-tab-panel label="已报销" tabkey="1"></yd-tab-panel>
+        </yd-tab>
+    </div>
+
+    <yd-infinitescroll :callback="getData" ref="infinitescroll">
+        <yd-preview slot="list" v-for="(item, index) in listData" :key="index" :buttons="item.buttons">
+            <yd-preview-header>
+                <div slot="left">类型</div>
+                <div slot="right">{{item.type}}</div>
+            </yd-preview-header>
+
+            <yd-preview-item>
+                <div slot="left">姓名</div>
+                <div slot="right">{{item.user.name}}</div>
+            </yd-preview-item>
+
+            <yd-preview-item>
+                <div slot="left">创建时间</div>
+                <div slot="right">{{item.create}}</div>
+            </yd-preview-item>
+
+            <yd-preview-item>
+                <div slot="left">金额</div>
+                <div slot="right">{{item.amount}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">票据</div>
+                <div slot="right">{{item.bill}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">地点</div>
+                <div slot="right">{{item.place}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">描述</div>
+                <div slot="right">{{item.remark}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">酒店/乘车</div>
+                <div slot="right">{{item.consume}}</div>
+            </yd-preview-item>
+
+        </yd-preview>
+
+        <!-- 数据全部加载完毕显示 -->
+        <span slot="doneTip">没有数据</span>
+        <!-- 加载中提示，不指定，将显示默认加载中图标 -->
+        <img slot="loadingTip" src="/mobile/img/loading10.svg"/>
+    </yd-infinitescroll>
+
+    <div class="btn-add">
+        <yd-button type="primary" size="large" @click.native="visible = true">添加费用</yd-button>
+    </div>
+
+    <yd-popup v-model="visible" position="bottom" height="100%">
+        <yd-cell-group>
+
+            <yd-cell-item arrow>
+                <input slot="right" v-model="form.place" type="text" @click.stop="citySelectVisible = true" readonly placeholder="请选择地点">
+            </yd-cell-item>
+
+            <yd-cell-item arrow type="label" v-if="curProjectList.length > 1">
+                <select slot="right" v-model="form.invoiceId">
+                    <option value="">请选择费用项目</option>
+                    <option :value="item.id" v-for="item in curProjectList">{{item.applyCode}}</option>
+                </select>
+            </yd-cell-item>
+
+            <yd-cell-item arrow type="label">
+                <select slot="right" v-model="form.type">
+                    <option value="">请选择费用类型</option>
+                    <option value="交通费">交通费</option>
+                    <option value="住宿费">住宿费</option>
+                    <option value="工具费">工具费</option>
+                    <option value="其他">其他</option>
+                </select>
+            </yd-cell-item>
+
+            <yd-cell-item>
+                <input slot="right" v-model="form.amount" type="number" placeholder="请输入费用金额">
+            </yd-cell-item>
+
+            <yd-cell-item>
+                <input slot="right" v-model="form.consume" type="text" placeholder="请输入酒店名称或乘车方式">
+            </yd-cell-item>
+
+            <yd-cell-item>
+                <span slot="left">票据</span>
+                <yd-radio-group slot="right" v-model="form.bill">
+                    <yd-radio val="有"></yd-radio>
+                    <yd-radio val="无"></yd-radio>
+                </yd-radio-group>
+            </yd-cell-item>
+
+            <yd-cell-item>
+                <yd-textarea slot="right" v-model="form.remark" placeholder="请输入费用描述" maxlength="100"></yd-textarea>
+            </yd-cell-item>
+
+        </yd-cell-group>
+        <div class="btn-add">
+            <yd-button type="primary" size="large" @click.native="save">提交</yd-button>
+        </div>
+    </yd-popup>
+
+    <yd-cityselect
+            v-model="citySelectVisible"
+            ref="cityselectDemo"
+            :callback="citySelectResult"
+            :items="district"
+    ></yd-cityselect>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script src="/mobile/lib/ydui/cityselect/index.js"></script>
+<script src="/mobile/lib/ydui/cityselect/gov_province_city_area_id.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            pn: 1,
+            ps: 15,
+            listData: [],
+            status: 0,
+            visible: false,
+
+            form: {
+                consume: '',
+                invoiceId: '',
+                place: '',
+                type: '',
+                amount: '',
+                bill: '',
+                remark: ''
+            },
+            userInfo: {},
+
+            citySelectVisible: false,
+            district: YDUI_DISTRICT,
+
+            curProjectList: []
+        },
+        created: function () {
+            var self = this;
+            self.$dialog.loading.open('加载中');
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                    self.getData();
+                    self.getCurProjectList();
+                    self.$dialog.loading.close();
+                });
+            });
+
+        },
+        methods: {
+            getCurProjectList: function () {
+                var self = this;
+                axios.get('/api/invoice/getCurProjectList', {
+                    params: {
+                        userId: self.userInfo.userid,
+                    }
+                }).then(function (resp) {
+                    self.curProjectList = resp.data.data;
+                });
+            },
+            save: function () {
+                if (!this.form.place || !this.form.type || !this.form.amount || !this.form.bill || !this.form.remark || !this.form.consume) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var self = this;
+                self.form.userId = self.userInfo.userid;
+                axios.post('/api/dispatch/create', Qs.stringify(self.form),{
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).then(function(resp) {
+                    if (resp.data.ret) {
+                        self.visible = false;
+                        self.pn = 1;
+                        self.listData = [];
+                        self.getData();
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'success'
+                        });
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            },
+            citySelectResult: function(resp) {
+                this.form.place = resp.itemName1 + ' ' + resp.itemName2 + ' ' + resp.itemName3;
+            },
+            tab: function (label, key) {
+                this.status = key;
+                this.pn = 1;
+                this.listData = [];
+                this.getData();
+            },
+            getData: function() {
+                var self = this;
+                axios.get('/api/dispatch/get', {
+                    params: {
+                        userId: self.userInfo.userid,
+                        status: self.status,
+                        pn: self.pn
+                    }
+                }).then(function (resp) {
+                    var _list = resp.data.data;
+
+                    _list.forEach(function (item) {
+                        item.buttons = [];
+                    });
+
+                    self.listData = self.listData.concat(_list);
+
+                    if (_list.length < self.ps) {
+                        /* 所有数据加载完毕 */
+                        self.$refs.infinitescroll.$emit('ydui.infinitescroll.loadedDone');
+                        return;
+                    }
+                    /* 单次请求数据完毕 */
+                    self.$refs.infinitescroll.$emit('ydui.infinitescroll.finishLoad');
+                    self.pn++;
+                });
+            }
+        }
+    })
+</script>
+{/block}

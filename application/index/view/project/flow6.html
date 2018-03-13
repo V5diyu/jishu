@@ -1,0 +1,138 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-service" v-cloak>
+
+    <div class="ui-title">实施进度</div>
+
+    <div style="background-color: #ffffff;border-bottom: 1px solid #d9d9d9;">
+        <div style="padding: 10px;font-size: 16px;">进度评估{{form.percentage}}</div>
+        <div style="padding: 10px;">
+            <mt-range slot="right" v-model="form.percentage">
+                <div slot="start">0</div>
+                <div slot="end">100</div>
+            </mt-range>
+        </div>
+    </div>
+
+    <yd-cell-group>
+
+        <yd-cell-item>
+            <span slot="left">进度状态：</span>
+            <select slot="right" v-model="form.status">
+                <option value="正常">正常</option>
+                <option value="延期">延期</option>
+            </select>
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <yd-textarea slot="right" v-model="form.remark" placeholder="请输入进度描述" maxlength="100"></yd-textarea>
+        </yd-cell-item>
+
+    </yd-cell-group>
+
+    <div style="padding: 0 15px;" v-if="!isDone && userInfo.auth == 2">
+        <yd-button size="large" @click.native="save" type="primary">保存</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<!-- import CSS -->
+<link rel="stylesheet" href="https://unpkg.com/mint-ui/lib/style.css">
+<!-- import JavaScript -->
+<script src="https://unpkg.com/mint-ui/lib/index.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            userInfo: {},
+            isDone: util.getParams('done') && 'disabled',
+            form: {
+                status: '正常',
+                percentage: 0,
+                remark: ''
+            }
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                });
+            });
+
+            self.getProjectDetail();
+        },
+        methods: {
+            getProjectDetail: function () {
+                var self = this;
+                axios.get('/api/invoice/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.form = resp.data.data.flow6 || {
+                            status: '正常',
+                            percentage: 0,
+                            remark: ''
+                        };
+                    }else{
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                });
+            },
+            save: function () {
+                if (!this.form.status || !this.form.percentage || !this.form.remark) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var self = this;
+                axios.post('/api/invoice/flow', Qs.stringify({
+                    id: util.getParams('id'),
+                    flow: 'flow6',
+                    progress: self.form.percentage === 100 ? 8 : 7,
+                    data: self.form
+                }),{
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).then(function(resp) {
+                    if (resp.data.ret) {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'success',
+                            callback: function () {
+                                history.go(-1);
+                            }
+                        });
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            }
+        }
+    })
+</script>
+{/block}

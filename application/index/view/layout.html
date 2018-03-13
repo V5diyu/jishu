@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <style>
+        [v-cloak]{
+            display: none;
+        }
+        .ui-title {
+            color: #666666;
+            font-size: 30px;
+            padding: 30px 0;
+            text-align: center;
+        }
+    </style>
+
+    <link rel="stylesheet" href="/mobile/iconfont/iconfont.css">
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="/mobile/lib/ydui/ydui.rem.css">
+
+    <title>{$site_title ? $site_title : $Think.config.site_title}</title>
+    <meta name="keywords" content="{$site_keywords ? $site_keywords : $Think.config.site_keywords}" />
+    <meta name="description" content="{$site_description ? $site_description : $Think.config.site_description}">
+
+    {block name="head"}{/block}
+</head>
+<body>
+    {block name="content"}{/block}
+
+    <!-- 引入rem自适应类库 -->
+    <script src="/mobile/lib/ydui/ydui.flexible.js"></script>
+    <!-- 引入 Vue -->
+    <script src="/mobile/lib/vue/vue.min.js"></script>
+    <!-- 引入组件库 -->
+    <script src="/mobile/lib/ydui/ydui.js"></script>
+    <script src="/mobile/lib/axios/axios.js"></script>
+    <script src="/mobile/lib/axios/qs.min.js"></script>
+    <script src="/mobile/lib/dingtalk/dingtalk.js"></script>
+    <script src="/mobile/js/dingding.js?1212121212121"></script>
+    <script src="/mobile/js/util.js?1212121212121"></script>
+    {block name="footer"}{/block}
+</body>
+</html>

@@ -1,0 +1,347 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .sale-manager .yd-preview {
+        border-top: 10px solid #f5f5f5;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div class="sale-manager" id="app" v-cloak>
+
+    <yd-tab active-color="#3296fa" :callback="tab">
+        <yd-tab-panel label="进行中" tabkey="0" :active="done == 0"></yd-tab-panel>
+        <yd-tab-panel label="已结项" tabkey="1" :active="done == 1"></yd-tab-panel>
+    </yd-tab>
+
+    <yd-infinitescroll :callback="getData" ref="infinitescroll">
+        <yd-preview slot="list" v-for="(item, index) in listData" @click.native="goDetail(item)"
+                    :buttons="item.buttons">
+            <yd-preview-header>
+                <div slot="left">客户名称</div>
+                <div slot="right">{{item.customer}}</div>
+            </yd-preview-header>
+            <yd-preview-item>
+                <div slot="left">申请人</div>
+                <div slot="right">{{item.name}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">申请日期</div>
+                <div slot="right">{{item.time}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">单号</div>
+                <div slot="right">{{item.applyCode}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">技术员</div>
+                <div slot="right">
+                    <span v-for="appoint in item.appoint"> {{appoint.name}}</span>
+                </div>
+            </yd-preview-item>
+            <yd-preview-item v-if="item.logCount > 0">
+                <div slot="left">日报</div>
+                <div slot="right">
+                    <yd-button @click.native.stop="log(item)" type="primary" shape="circle">
+                        点击查看
+                    </yd-button>
+                </div>
+            </yd-preview-item>
+            <yd-preview-item v-if="item.done == 0 && item.progress >= 2 && (userInfo.auth == 1 || userInfo.auth == 4)">
+                <div slot="left">新增天数</div>
+                <div slot="right">
+                    <yd-button v-if="!item.addDaysInfo" @click.native.stop="addDays(item)" type="primary" shape="circle">
+                        新增天数
+                    </yd-button>
+                    <div v-if="item.addDaysInfo">
+                        <yd-button v-if="item.addDaysInfo.status == 0 || item.addDaysInfo.status == 1" @click.native.stop="approvePopup(item.addDaysInfo)" type="primary" shape="circle">
+                            等待审批中
+                        </yd-button>
+                        <yd-button v-if="item.addDaysInfo.progress == 1" @click.native.stop="appoint(item)" type="primary" shape="circle">
+                            等待指派人员
+                        </yd-button>
+                        <yd-button v-if="item.addDaysInfo.progress == 2" type="primary" shape="circle">
+                            完成
+                        </yd-button>
+                    </div>
+                </div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">当前状态</div>
+                <div slot="right">
+                    <yd-button v-if="item.status == 0 || item.status == 1" @click.native.stop="approvePopup(item)" type="primary"
+                               shape="circle">等待审批中
+                    </yd-button>
+                    <yd-button v-if="item.status == 3 || item.status == 4" @click.native.stop="approvePopup(item)" type="danger"
+                               shape="circle">审批被拒绝
+                    </yd-button>
+                    <yd-button v-if="item.progress == 1" @click.native.stop="appoint(item)" type="primary"
+                               shape="circle">等待指派人员
+                    </yd-button>
+                    <yd-button v-if="item.progress == 2" type="primary" shape="circle">客户电话沟通</yd-button>
+                    <yd-button v-if="item.progress == 3" type="primary" shape="circle">计划安排</yd-button>
+                    <yd-button v-if="item.progress == 4" type="primary" shape="circle">借用设备申请</yd-button>
+                    <yd-button v-if="item.progress == 5" type="primary" shape="circle">等待确定出发日期</yd-button>
+                    <yd-button v-if="item.progress == 6" type="primary" shape="circle">现场问题沟通确认</yd-button>
+                    <yd-button v-if="item.progress == 7" type="primary" shape="circle">技术支持进行</yd-button>
+                    <yd-button v-if="item.progress == 8" type="primary" shape="circle">反馈销售确认结束</yd-button>
+                    <yd-button v-if="item.progress == 9" @click.native.stop="saleConfirm(item)" type="primary" shape="circle">等待销售确认结束</yd-button>
+                    <yd-button v-if="item.progress == 10" type="primary" shape="circle">确定返程日期</yd-button>
+                    <yd-button v-if="item.progress == 11" type="primary" shape="circle">财务报销</yd-button>
+                    <yd-button v-if="item.progress == 12" type="primary" shape="circle">项目总结</yd-button>
+                    <yd-button v-if="item.progress == 13" type="danger" shape="circle">已结项</yd-button>
+                </div>
+            </yd-preview-item>
+
+        </yd-preview>
+
+        <!-- 数据全部加载完毕显示 -->
+        <span slot="doneTip">没有数据</span>
+        <!-- 加载中提示，不指定，将显示默认加载中图标 -->
+        <img slot="loadingTip" src="http://static.ydcss.com/uploads/ydui/loading/loading10.svg"/>
+    </yd-infinitescroll>
+
+    <yd-popup v-model="visible" position="center" width="90%">
+        <div style="margin: 10px 0;text-align: center;font-size: 16px;">审批流程</div>
+        <yd-timeline>
+            <yd-timeline-item>
+                <p>审批人：销售总监</p>
+                <p>
+                    审批结果：
+                    <span v-if="approveStatus == 0">未审批</span>
+                    <span v-if="approveStatus == 1 || approveStatus == 2">同意</span>
+                    <span v-if="approveStatus == 3">拒绝</span>
+                </p>
+                <!--<p>审批时间：2017-08-18 08:24:18</p>-->
+            </yd-timeline-item>
+            <yd-timeline-item>
+                <p>审批人：财务</p>
+                <p>
+                    审批结果：
+                    <span v-if="approveStatus == 0 || approveStatus == 1 || approveStatus == 3">未审批</span>
+                    <span v-if="approveStatus == 2">同意</span>
+                    <span v-if="approveStatus == 4">拒绝</span>
+                </p>
+                <!--<p>审批时间：2017-08-18 08:24:18</p>-->
+            </yd-timeline-item>
+        </yd-timeline>
+    </yd-popup>
+
+    <yd-tabbar fixed active-color="#3296fa">
+        <yd-tabbar-item title="工作台" type="a" link="/index/">
+            <yd-icon name="home" slot="icon" size="0.54rem"></yd-icon>
+        </yd-tabbar-item>
+        <yd-tabbar-item title="项目" type="a" link="/index/project" active>
+            <yd-icon name="type" slot="icon" size="0.54rem"></yd-icon>
+        </yd-tabbar-item>
+    </yd-tabbar>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            pn: 1,
+            ps: 15,
+            listData: [],
+
+            curData: {},
+
+            // 当前审批状态
+            approveStatus: 0,
+
+            // 0 进行中 1 已结项
+            done: 0,
+
+            visible: false,
+        },
+        created: function () {
+            var self = this;
+            self.$dialog.loading.open('加载中');
+            self.done = localStorage.getItem('tabKey') || 0;
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                    self.getData();
+                    self.$dialog.loading.close();
+                });
+            });
+        },
+        methods: {
+            log: function (item) {
+                location.href = '/index/project/log?invoiceId=' + item.id;
+            },
+            addDays: function (item) {
+                if (this.userInfo.auth !== 1) {
+                    this.$dialog.toast({
+                        mes: '销售可申请新增天数',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                location.href = '/index/project/addDays?process_instance_id=' + item.process_instance_id;
+            },
+            // 销售确认结束
+            saleConfirm: function (item) {
+                var self = this;
+
+                if (self.userInfo.auth !== 1) {
+                    self.$dialog.toast({
+                        mes: '请等待销售确认结束',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                self.$dialog.confirm({
+                    title: '确认结束',
+                    mes: '',
+                    opts: function () {
+                        axios.post('/api/invoice/saleConfirm', Qs.stringify({
+                            id: item.id,
+                            progress: 10
+                        }),{
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                        }).then(function(resp) {
+                            if (resp.data.ret) {
+                                item.progress = 10;
+                                self.$dialog.toast({
+                                    mes: resp.data.msg,
+                                    timeout: 1500,
+                                    icon: 'success'
+                                });
+                            } else {
+                                self.$dialog.toast({
+                                    mes: resp.data.msg,
+                                    timeout: 1500,
+                                    icon: 'error'
+                                });
+                            }
+                        })
+                    }
+                });
+            },
+            // 指派 （技术经理权限）
+            appoint: function (item) {
+                var self = this;
+                if (self.userInfo.auth !== 4) {
+                    self.$dialog.confirm({
+                        title: '发送钉消息给技术经理',
+                        mes: '',
+                        opts: function () {
+                            ding.sendDing({
+                                userId: [ding.technicalManagerUserId],
+                                url: location.origin + '/index/project/',
+                                text: '有技术申请需要您指派人员'
+                            }, function () {
+                                self.$dialog.toast({
+                                    mes: '发送成功',
+                                    timeout: 1500,
+                                    icon: 'success'
+                                });
+                            });
+                        }
+                    });
+                    return;
+                }
+
+                self.curData = item;
+                ding.chooseContactAndDepartments(function (resp) {
+                    var appoint = resp.users;
+                    var appointIds = [];
+                    appoint.forEach(function (item) {
+                        appointIds.push(item.emplId)
+                    });
+
+                    axios.post('/api/invoice/appoint', Qs.stringify({
+                        id: self.curData.id,
+                        appoint: appoint,
+                        appointIds: appointIds
+                    }), {
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                    }).then(function (resp) {
+                        if (resp.data.ret) {
+                            item.progress = 2;
+                            self.$dialog.toast({
+                                mes: resp.data.msg,
+                                timeout: 1500,
+                                icon: 'success',
+                                callback: function () {
+                                    ding.sendDing({
+                                        userId: appointIds,
+                                        url: location.origin + '/index/project/',
+                                        text: '技术经理给你指派新项目了'
+                                    }, function () {
+                                        self.$dialog.toast({
+                                            mes: '发送成功',
+                                            timeout: 1500,
+                                            icon: 'success'
+                                        });
+                                    });
+                                }
+                            });
+                        } else {
+                            self.$dialog.toast({
+                                mes: resp.data.msg,
+                                timeout: 1500,
+                                icon: 'error'
+                            });
+                        }
+                    })
+                })
+            },
+            goDetail: function (item) {
+                location.href = '/index/project/detail?id=' + item.id;
+            },
+            approvePopup: function (item) {
+                this.approveStatus = item.status;
+                this.visible = true;
+            },
+            tab: function (label, key) {
+                this.pn = 1;
+                this.listData = [];
+                this.done = key;
+
+                localStorage.setItem('tabKey', key);
+
+                this.getData();
+            },
+            getData: function () {
+                var self = this;
+
+                axios.get('/api/invoice/get', {
+                    params: {
+                        userId: self.userInfo.userid,
+                        auth: self.userInfo.auth,
+                        done: Number(self.done),
+                        pn: self.pn
+                    }
+                }).then(function (resp) {
+                    var _list = resp.data.data;
+                    _list.forEach(function (item, index) {
+                        item.buttons = [];
+                    });
+                    self.listData = self.listData.concat(_list);
+
+                    if (_list.length < self.ps) {
+                        self.$refs.infinitescroll.$emit('ydui.infinitescroll.loadedDone');
+                        return;
+                    }
+                    /* 单次请求数据完毕 */
+                    self.$refs.infinitescroll.$emit('ydui.infinitescroll.finishLoad');
+                    self.pn++;
+                });
+            }
+        }
+    })
+</script>
+{/block}

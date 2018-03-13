@@ -1,0 +1,75 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .know-detail{
+        background-color: #ffffff;
+    }
+    .know-detail .detail-header{
+        border-bottom: 1px solid #e8e8e8;
+        line-height: 1rem;
+        padding: 0 15px;
+        font-size: 16px;
+    }
+    .know-detail .detail-img{
+        padding: 0 15px;
+        margin-top: 15px;
+    }
+    .know-detail img{
+        display: block;
+        margin: 0 auto;
+        max-width: 100%;
+    }
+    .know-detail .detail-content{
+        padding: 15px;
+        font-size: 14px;
+    }
+    .know-detail .detail-content *{
+        font-size: 14px;
+        line-height: 1.5;
+        letter-spacing: .5px;
+    }
+</style>
+{/block}
+
+{block name="content"}
+    <div id="app" class="support-know" v-cloak>
+
+        <div class="know-detail">
+            <div class="detail-header">{{detail.title}}</div>
+
+            <div class="detail-img">
+                <img :src="detail.url" alt="">
+            </div>
+
+            <div class="detail-content" v-html="detail.content"></div>
+        </div>
+
+    </div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            detail: {}
+        },
+        created: function () {
+            this.getData();
+        },
+        methods: {
+            getData: function () {
+                var self = this;
+                axios.get('/api/Knowledge/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    self.detail = resp.data.data;
+                })
+            }
+        }
+    })
+</script>
+{/block}

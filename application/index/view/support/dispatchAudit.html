@@ -1,0 +1,118 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .support-dispatch{
+        padding-bottom: 90px;
+    }
+    .support-dispatch .yd-preview{
+        border-bottom: 10px solid #f5f5f5;
+    }
+    .support-dispatch .btn-add{
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+        background-color: #ffffff;
+        z-index: 1000;
+    }
+    .support-dispatch .btn-add .yd-btn-block{
+        margin-top: 0;
+    }
+    .support-dispatch .yd-popup .yd-cell-box{
+        margin: 0;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="support-dispatch" v-cloak>
+
+    <yd-infinitescroll :callback="getData" ref="infinitescroll">
+        <yd-preview slot="list" v-for="(item, index) in listData" :key="index" :buttons="item.buttons">
+            <yd-preview-header>
+                <div slot="left">客户名称</div>
+                <div slot="right">{{item.customer}}</div>
+            </yd-preview-header>
+
+            <yd-preview-item>
+                <div slot="left">技术人员</div>
+                <div slot="right">
+                    <span v-for="a in item.appoint" v-if="a.emplId == item.userId">{{a.name}}</span>
+                </div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">服务类型</div>
+                <div slot="right">{{item.type}}</div>
+            </yd-preview-item>
+            <yd-preview-item>
+                <div slot="left">操作</div>
+                <div slot="right">
+                    <yd-button type="primary" shape="circle">审批</yd-button>
+                </div>
+            </yd-preview-item>
+        </yd-preview>
+
+        <!-- 数据全部加载完毕显示 -->
+        <span slot="doneTip">没有数据</span>
+        <!-- 加载中提示，不指定，将显示默认加载中图标 -->
+        <img slot="loadingTip" src="/mobile/img/loading10.svg"/>
+    </yd-infinitescroll>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            pn: 1,
+            ps: 15,
+            listData: [],
+
+            userInfo: {},
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                    self.getData();
+                });
+            });
+        },
+        methods: {
+            getData: function() {
+                var self = this;
+                axios.get('/api/dispatch/getAuditList', {
+                    params: {
+                        pn: self.pn
+                    }
+                }).then(function (resp) {
+                    alert(JSON.stringify(resp.data.data));
+                    var _list = resp.data.data;
+
+                    _list.forEach(function (item) {
+                        item.buttons = [];
+                    });
+
+                    self.listData = self.listData.concat(_list);
+
+                    if (_list.length < self.ps) {
+                        /* 所有数据加载完毕 */
+                        self.$refs.infinitescroll.$emit('ydui.infinitescroll.loadedDone');
+                        return;
+                    }
+                    /* 单次请求数据完毕 */
+                    self.$refs.infinitescroll.$emit('ydui.infinitescroll.finishLoad');
+                    self.pn++;
+                });
+            }
+        }
+    })
+</script>
+{/block}

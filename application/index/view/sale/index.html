@@ -1,0 +1,59 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .sale-index .btn-release-box{
+        padding: 20px;
+    }
+    .sale-index .btn-release{
+        display: block;
+        border: 1px solid #3296fa;
+        text-align: center;
+        padding: 100px 0;
+        background-color: #fff;
+    }
+    .sale-index .btn-release .iconfont{
+        color: #3296fa;
+        font-size: 60px;
+        font-weight: bold;
+    }
+    .sale-index .btn-release p{
+        color: #666;
+        font-size: 16px;
+        margin-top: 20px;
+    }
+</style>
+{/block}
+
+{block name="content"}
+    <div id="app" class="sale-index" v-cloak>
+
+        <div class="btn-release-box">
+            <a href="/index/sale/customer" class="btn-release">
+                <i class="iconfont icon-zengjia"></i>
+                <p>提出技术支持申请</p>
+            </a>
+        </div>
+
+        <yd-tabbar fixed active-color="#3296fa">
+            <yd-tabbar-item  title="工作台" type="a" link="/index/sale" active>
+                <yd-icon name="home" slot="icon" size="0.54rem"></yd-icon>
+            </yd-tabbar-item>
+            <yd-tabbar-item title="项目" type="a" link="/index/sale/manager">
+                <yd-icon name="type" slot="icon" size="0.54rem"></yd-icon>
+            </yd-tabbar-item>
+        </yd-tabbar>
+
+    </div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        methods: {
+
+        }
+    })
+</script>
+{/block}

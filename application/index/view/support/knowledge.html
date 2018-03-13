@@ -1,0 +1,79 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+.support-know .yd-list-img{
+    position: relative;
+}
+.support-know .list-img{
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    padding-bottom: 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+}
+</style>
+{/block}
+
+{block name="content"}
+    <div id="app" class="support-know" v-cloak>
+
+        <yd-infinitescroll :callback="getData" ref="infinitescroll">
+
+            <yd-list slot="list" theme="3">
+                <yd-list-item v-for="item, key in listData" :href="'/index/support/knowledgeList?id='+item.id" :key="key">
+                    <div slot="img" class="list-img" :style="{'background-image': 'url('+ item.url +')'}"></div>
+                    <span slot="title">{{item.name}}</span>
+                </yd-list-item>
+            </yd-list>
+
+            <!-- 数据全部加载完毕显示 -->
+            <span slot="doneTip">没有数据</span>
+            <!-- 加载中提示，不指定，将显示默认加载中图标 -->
+            <img slot="loadingTip" src="http://static.ydcss.com/uploads/ydui/loading/loading10.svg"/>
+        </yd-infinitescroll>
+
+    </div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            pn: 1,
+            ps: 15,
+            listData: [],
+        },
+        created: function () {
+            this.getData();
+        },
+        methods: {
+            getData: function () {
+                var self = this;
+                axios.get('/api/Knowledge_Classify/get', {
+                    params: {
+                        pn: self.pn
+                    }
+                }).then(function (resp) {
+                    var _list = resp.data.data;
+
+                    self.listData = self.listData.concat(_list);
+
+                    if (_list.length < self.ps) {
+                        /* 所有数据加载完毕 */
+                        self.$refs.infinitescroll.$emit('ydui.infinitescroll.loadedDone');
+                        return;
+                    }
+                    /* 单次请求数据完毕 */
+                    self.$refs.infinitescroll.$emit('ydui.infinitescroll.finishLoad');
+                    self.pn++;
+                })
+            }
+        }
+    })
+</script>
+{/block}

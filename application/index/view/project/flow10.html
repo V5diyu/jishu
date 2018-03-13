@@ -1,0 +1,263 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .sale-service .list-group{
+        padding: .24rem;
+    }
+    .sale-service .list-group .list-item{
+        display: flex;
+        height: 1rem;
+        line-height: 1rem;
+        padding: 0 .2rem;
+        background-color: #f5f5f5;
+        border-bottom: 1px dashed #e8e8e8;
+    }
+    .sale-service .list-group .list-item .left,
+    .sale-service .list-group .list-item .right{
+        flex: 1;
+    }
+    .sale-service .list-group .list-item .right{
+        text-align: right;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-service" v-cloak>
+
+    <div class="ui-title">项目总结</div>
+
+    <!-- 基本信息 -->
+    <yd-preview :buttons="[]">
+        <yd-preview-header>
+            <div slot="left">客户名称</div>
+            <div slot="right">{{detail.customer}}</div>
+        </yd-preview-header>
+        <yd-preview-item>
+            <div slot="left">申请人</div>
+            <div slot="right">{{detail.name}}</div>
+        </yd-preview-item>
+        <yd-preview-item>
+            <div slot="left">申请日期</div>
+            <div slot="right">{{detail.time}}</div>
+        </yd-preview-item>
+        <yd-preview-item>
+            <div slot="left">出差人员</div>
+            <div slot="right"><span v-for="item in detail.appoint">{{item.name}} </span> </div>
+        </yd-preview-item>
+    </yd-preview>
+
+    <!-- 详细信息 -->
+    <yd-accordion style="margin-top: 10px;">
+        <yd-accordion-item title="客户信息">
+            <div class="list-group">
+                <div class="list-item">
+                    <div class="left">销售单号</div>
+                    <div class="right">{{detail.code}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">客户名称</div>
+                    <div class="right">{{detail.customer}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">单位名称</div>
+                    <div class="right">{{detail.company}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">前往地点</div>
+                    <div class="right">{{detail.place}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">详细地址</div>
+                    <div class="right">{{detail.address}}</div>
+                </div>
+                <div class="list-item" v-for="item in detail.contact">
+                    <div class="left">联系人</div>
+                    <div class="right">{{item.name}} - {{item.tel}}</div>
+                </div>
+            </div>
+        </yd-accordion-item>
+        <yd-accordion-item title="服务内容">
+            <div class="list-group">
+                <div class="list-item">
+                    <div class="left">服务类型</div>
+                    <div class="right">{{detail.type}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">单位数量</div>
+                    <div class="right">{{detail.number}}</div>
+                </div>
+                <div class="list-item" v-for="item in detail.device">
+                    <div class="left">设备名称/数量</div>
+                    <div class="right">{{item.name}} / {{item.number}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">备注说明</div>
+                    <div class="right">{{detail.remark}}</div>
+                </div>
+            </div>
+        </yd-accordion-item>
+        <yd-accordion-item title="预收费用">
+            <div class="list-group">
+                <div class="list-item">
+                    <div class="left">服务天数</div>
+                    <div class="right">{{detail.days}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">服务人数</div>
+                    <div class="right">{{detail.peoples}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">交通费</div>
+                    <div class="right">{{detail.traffic}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">住宿费（单日）</div>
+                    <div class="right">{{detail.stayCharge}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">服务费（单日）</div>
+                    <div class="right">{{detail.serviceCharge}}</div>
+                </div>
+                <div class="list-item">
+                    <div class="left">合计</div>
+                    <div class="right">￥{{detail.days * detail.peoples * (Number(detail.stayCharge) + Number(detail.serviceCharge)) + Number(detail.traffic * 2)}}</div>
+                </div>
+            </div>
+        </yd-accordion-item>
+    </yd-accordion>
+
+    <yd-cell-group>
+
+        <yd-cell-item>
+            <input slot="right" v-model="form.amount" :disabled="isDone" type="number" placeholder="本项目申请备用金总额">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <yd-textarea slot="right" :disabled="isDone" v-model="form.remark" placeholder="请输入项目总结" maxlength="100"></yd-textarea>
+        </yd-cell-item>
+
+    </yd-cell-group>
+
+    <div style="padding: 0 15px 15px 15px;" v-if="!isDone && userInfo.auth == 2">
+        <yd-button size="large" @click.native="save" type="primary">保存</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            detail: {},
+            userInfo: {},
+            isDone: util.getParams('done') && 'disabled',
+            form: {
+                amount: '',
+                remark: ''
+            }
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                    self.getData();
+                });
+            });
+
+            if (self.isDone) {
+                self.getProjectDetail();
+            }
+        },
+        methods: {
+            getProjectDetail: function () {
+                var self = this;
+                axios.get('/api/invoice/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.form = resp.data.data.flow10;
+                    }else{
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                });
+            },
+            save: function () {
+                if (!this.form.remark || !this.form.amount) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var self = this;
+                axios.post('/api/invoice/flow', Qs.stringify({
+                    id: util.getParams('id'),
+                    flow: 'flow10',
+                    progress: 13,
+                    data: self.form
+                }),{
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).then(function(resp) {
+                    if (resp.data.ret) {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'success',
+                            callback: function () {
+                                history.go(-1);
+                            }
+                        });
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            },
+            delDevice: function (index) {
+                this.form.device.splice(index, 1);
+            },
+            addDevice: function () {
+                this.form.device.push({
+                    name: '',
+                    number: ''
+                })
+            },
+            getData: function() {
+                var self = this;
+                axios.get('/api/invoice/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.detail = resp.data.data;
+                    }else{
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        }
+    })
+</script>
+{/block}

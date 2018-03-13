@@ -1,0 +1,137 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-charge" v-cloak>
+
+    <div class="ui-title">预收费用</div>
+
+    <yd-cell-group>
+
+        <yd-cell-item>
+            <span slot="left">服务天数：</span>
+            <input slot="right" v-model="form.days" type="number" placeholder="请选择服务天数">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">服务人数：</span>
+            <input slot="right" v-model="form.peoples" type="number" placeholder="请输入服务人数">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">交通费：</span>
+            <input slot="right" v-model="form.traffic" type="number" placeholder="请输入交通费">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">住宿费（单日）：</span>
+            <input slot="right" v-model="form.stayCharge" type="number" placeholder="请输入住宿费（单日）">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">服务费（单日）：</span>
+            <input slot="right" v-model="form.serviceCharge" type="number" placeholder="请输入服务费（单日）">
+        </yd-cell-item>
+
+    </yd-cell-group>
+
+    <div style="padding: 0 15px;">
+        <yd-button size="large" @click.native="save" type="primary">提交申请</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            userInfo: {},
+            form: {
+                days: '', // 服务天数
+                peoples: '', // 服务人数
+                traffic: '', // 交通费
+                stayCharge: '', // 住宿费（单日）
+                serviceCharge: '' // 服务费（单日）
+            }
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function(){
+                ding.getUserInfo(function(resp){
+                    self.userInfo = resp.data;
+                });
+            });
+        },
+        methods: {
+            save: function () {
+                var self = this;
+                if (!this.form.days || !this.form.peoples || !this.form.traffic || !this.form.stayCharge || !this.form.serviceCharge) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var extend = function (o, n) {
+                    for (var p in n) {
+                        if (n.hasOwnProperty(p) && (!o.hasOwnProperty(p) ))
+                            o[p] = n[p];
+                    }
+                };
+
+                var formData = JSON.parse(localStorage.getItem('applyFormData'));
+                extend(formData, this.form);
+
+                var charge = this.form.days * this.form.peoples * (Number(this.form.stayCharge) + Number(this.form.serviceCharge)) + Number(this.form.traffic);
+
+                this.$dialog.confirm({
+                    title: '申请技术支持',
+                    mes: '预计费用' + charge + '元',
+                    opts: function () {
+                        formData.total = charge;
+                        self.submit(formData);
+                    }
+                });
+            },
+            submit: function (formData) {
+                var self = this;
+                formData.userId = self.userInfo.userid;
+                formData.name = self.userInfo.name;
+                formData.department = self.userInfo.department[0];
+
+                axios.post('/api/invoice/operationSubmit', Qs.stringify(formData),{
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).then(function(resp) {
+                    if (resp.data.ret) {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'success',
+                            callback: function () {
+                                location.href = '/index/project'
+                            }});
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                }).catch(function(error) {
+                    alert(JSON.stringify(error));
+                });
+            }
+        }
+    })
+</script>
+{/block}

@@ -1,0 +1,219 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .sale-service .icon-jia {
+        font-size: 28px;
+        color: #04be02;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .icon-jian {
+        font-size: 28px;
+        color: #ef4f4f;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .yd-flexbox {
+        border-bottom: 10px solid #F4F3F4;
+    }
+
+    .sale-service .yd-cell:after {
+        border-bottom: none;
+    }
+
+    .sale-service .btn-add {
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+    }
+
+    .sale-service .btn-add .yd-btn-block {
+        margin-top: 0;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-service" v-cloak>
+
+    <div class="ui-title">客户电话沟通</div>
+
+    <yd-cell-group>
+
+        <yd-cell-item arrow type="label">
+            <span slot="left">服务类型：</span>
+            <input slot="right" v-model="form.type" :disabled="isDone" type="text" @click.stop="visible = true" readonly
+                   placeholder="请选择服务类型">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">单位数量：</span>
+            <input slot="right" v-model="form.number" :disabled="isDone" type="number" placeholder="请输入技术支持单位数量">
+        </yd-cell-item>
+
+        <yd-flexbox v-for="(item, index) in form.device">
+            <yd-flexbox-item>
+                <yd-cell-item>
+                    <span slot="left">设备名称：</span>
+                    <input slot="right" v-model="item.name" :disabled="isDone" type="text" placeholder="请输入问题设备名称">
+                </yd-cell-item>
+
+                <yd-cell-item>
+                    <span slot="left">设备数量：</span>
+                    <input slot="right" v-model="item.number" :disabled="isDone" type="number" placeholder="请输入问题设备数量">
+                </yd-cell-item>
+            </yd-flexbox-item>
+
+            <div v-if="!isDone && userInfo.auth == 2">
+                <i @click="delDevice(index)" v-show="(index+1) < form.device.length" class="iconfont icon-jian"></i>
+                <i @click="addDevice" v-show="(index+1) == form.device.length" class="iconfont icon-jia"></i>
+            </div>
+        </yd-flexbox>
+
+        <yd-cell-item>
+            <yd-textarea slot="right" :disabled="isDone" v-model="form.remark" placeholder="请输入备注说明" maxlength="100"></yd-textarea>
+        </yd-cell-item>
+
+    </yd-cell-group>
+
+    <yd-popup v-model="visible" position="bottom" height="auto">
+        <yd-cell-group title="请选择服务类型">
+            <yd-cell-item type="checkbox" v-for="(item, index) in serviceType">
+                <span slot="left">{{item.name}}</span>
+                <input slot="right" type="checkbox" :value="item.name" v-model="form.type"/>
+            </yd-cell-item>
+        </yd-cell-group>
+        <div class="btn-add">
+            <yd-button type="primary" size="large" @click.native="visible = false">确定</yd-button>
+        </div>
+    </yd-popup>
+
+    <div style="padding: 0 15px;" v-if="!isDone && userInfo.auth == 2">
+        <yd-button size="large" @click.native="save" type="primary">保存</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            userInfo: {},
+            isDone: util.getParams('done') && 'disabled',
+            form: {
+                type: [], // 服务类型
+                number: '', // 技术支持单位数量
+                device: [{
+                    name: '', // 问题设备名称
+                    number: '' // 问题设备数量
+                }],
+                remark: '' // 备注
+
+            },
+            visible: false,
+            serviceType: []
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                });
+            });
+
+            self.getServiceType();
+
+            if (self.isDone) {
+                self.getProjectDetail();
+            }
+        },
+        methods: {
+            getProjectDetail: function () {
+                var self = this;
+                axios.get('/api/invoice/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.form = resp.data.data.flow1;
+                    }else{
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                });
+            },
+            getServiceType: function () {
+                var self = this;
+                axios.get('/api/Service_Type/get', {
+                    params: {}
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.serviceType = resp.data.data;
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            },
+            save: function () {
+                if (this.form.type.length === 0 || !this.form.number || !this.form.remark) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var self = this;
+                axios.post('/api/invoice/flow', Qs.stringify({
+                    id: util.getParams('id'),
+                    flow: 'flow1',
+                    progress: 3,
+                    data: self.form
+                }),{
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).then(function(resp) {
+                    if (resp.data.ret) {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'success',
+                            callback: function () {
+                                history.go(-1);
+                            }
+                        });
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            },
+            delDevice: function (index) {
+                this.form.device.splice(index, 1);
+            },
+            addDevice: function () {
+                this.form.device.push({
+                    name: '',
+                    number: ''
+                })
+            }
+        }
+    })
+</script>
+{/block}

@@ -1,0 +1,53 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .support-rules .rules-title{
+        padding: 10px 15px;
+        font-size: 16px;
+        font-weight: 500;
+    }
+</style>
+{/block}
+
+{block name="content"}
+    <div id="app" class="support-rules" v-cloak>
+
+        <div class="rules-list">
+            <div class="rules-item" v-for="(item, index) in listData">
+                <div class="rules-title">{{item.classifyName}}</div>
+                <yd-cell-group>
+                    <yd-cell-item arrow type="a" :href="'/index/support/rulesDetail?id='+article.id" v-for="(article, i) in item.rulesList">
+                        <span slot="left">{{article.title}}</span>
+                    </yd-cell-item>
+                </yd-cell-group>
+            </div>
+        </div>
+
+    </div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            listData: []
+        },
+        created: function () {
+            this.getData();  
+        },
+        methods: {
+            getData: function () {
+                var self = this;
+                axios.get('/api/rules/get', {
+                    params: {}
+                }).then(function (resp) {
+                    self.listData = resp.data.data;
+                    console.log(self.listData);
+                })
+            }
+        }
+    })
+</script>
+{/block}

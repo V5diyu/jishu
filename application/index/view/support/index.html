@@ -1,0 +1,65 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+.support-index .iconfont{
+    color: #3296fa;
+    font-size: .6rem;
+}
+</style>
+{/block}
+
+{block name="content"}
+    <div id="app" class="support-index" v-cloak>
+
+        <yd-grids-group :rows="2">
+            <yd-grids-item type="a" href="/index/support/log">
+                <i class="iconfont icon-dingdan" slot="text"></i>
+                <p slot="text">日志</p>
+            </yd-grids-item>
+            <!--<yd-grids-item type="a" href="/index/support/log">-->
+                <!--<i class="iconfont icon-wenda" slot="text"></i>-->
+                <!--<p slot="text">问答</p>-->
+            <!--</yd-grids-item>-->
+            <yd-grids-item type="a" href="/index/support/feedback">
+                <i class="iconfont icon-yijianfankui" slot="text"></i>
+                <p slot="text">意见反馈</p>
+            </yd-grids-item>
+            <yd-grids-item type="a" href="/index/support/dispatch">
+                <i class="iconfont icon-dingdandaifukuan" slot="text"></i>
+                <p slot="text">报销</p>
+            </yd-grids-item>
+            <yd-grids-item type="a" href="/index/support/rules">
+                <i class="iconfont icon-jieban" slot="text"></i>
+                <p slot="text">管理制度</p>
+            </yd-grids-item>
+            <yd-grids-item type="a" href="/index/support/knowledge">
+                <i class="iconfont icon-neirong2" slot="text"></i>
+                <p slot="text">知识库</p>
+            </yd-grids-item>
+        </yd-grids-group>
+
+        <yd-tabbar fixed active-color="#3296fa">
+            <yd-tabbar-item  title="工作台" type="a" link="/index/support" active>
+                <yd-icon name="home" slot="icon" size="0.54rem"></yd-icon>
+            </yd-tabbar-item>
+            <yd-tabbar-item title="项目" type="a" link="/index/sale/manager">
+                <yd-icon name="type" slot="icon" size="0.54rem"></yd-icon>
+            </yd-tabbar-item>
+        </yd-tabbar>
+
+    </div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        methods: {
+            handleClick: function () {
+                this.$dialog.alert({mes: 'Hello World!'});
+            }
+        }
+    })
+</script>
+{/block}

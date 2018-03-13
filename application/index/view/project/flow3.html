@@ -1,0 +1,191 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .sale-service .icon-jia {
+        font-size: 28px;
+        color: #04be02;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .icon-jian {
+        font-size: 28px;
+        color: #ef4f4f;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .yd-flexbox {
+        border-bottom: 10px solid #F4F3F4;
+    }
+
+    .sale-service .yd-cell:after {
+        border-bottom: none;
+    }
+
+    .sale-service .btn-add {
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-service" v-cloak>
+
+    <div class="ui-title">借用设备申请</div>
+
+    <yd-cell-group>
+
+        <yd-flexbox v-for="(item, index) in form.device">
+            <yd-flexbox-item>
+                <yd-cell-item>
+                    <span slot="left">ERP编码：</span>
+                    <input slot="right" v-model="item.code" :disabled="isDone" type="text" placeholder="请输入ERP编码">
+                </yd-cell-item>
+
+                <yd-cell-item>
+                    <span slot="left">设备名称：</span>
+                    <input slot="right" v-model="item.name" :disabled="isDone" type="text" placeholder="请输入设备名称">
+                </yd-cell-item>
+
+                <yd-cell-item>
+                    <span slot="left">设备类型：</span>
+                    <input slot="right" v-model="item.type" :disabled="isDone" type="text" placeholder="请输入设备类型">
+                </yd-cell-item>
+
+                <yd-cell-item>
+                    <span slot="left">设备数量：</span>
+                    <input slot="right" v-model="item.number" :disabled="isDone" type="number" placeholder="请输入设备数量">
+                </yd-cell-item>
+
+                <yd-cell-item>
+                    <span slot="left">设备用途：</span>
+                    <input slot="right" v-model="item.use" :disabled="isDone" type="text" placeholder="请输入设备用途">
+                </yd-cell-item>
+            </yd-flexbox-item>
+
+            <div v-if="!isDone && userInfo.auth == 2">
+                <i @click="delDevice(index)" v-show="(index+1) < form.device.length" class="iconfont icon-jian"></i>
+                <i @click="addDevice" v-show="(index+1) == form.device.length" class="iconfont icon-jia"></i>
+            </div>
+        </yd-flexbox>
+
+        <!--<yd-cell-item>-->
+            <!--<yd-textarea slot="right" :disabled="isDone" v-model="form.remark" placeholder="请输入备注说明" maxlength="100"></yd-textarea>-->
+        <!--</yd-cell-item>-->
+
+    </yd-cell-group>
+
+    <div style="padding: 0 15px;" v-if="!isDone && userInfo.auth == 2">
+        <yd-button size="large" @click.native="save" type="primary">保存</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            userInfo: {},
+            isDone: util.getParams('done') && 'disabled',
+            form: {
+                device: [
+                    {
+                        code: '',
+                        name: '',
+                        type: '',
+                        number: '',
+                        use: ''
+                    }
+                ]
+            },
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                });
+            });
+
+            if (self.isDone) {
+                self.getProjectDetail();
+            }
+        },
+        methods: {
+            getProjectDetail: function () {
+                var self = this;
+                axios.get('/api/invoice/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.form = resp.data.data.flow3;
+                    }else{
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                });
+            },
+            save: function () {
+                if (this.form.length === 0) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var self = this;
+                axios.post('/api/invoice/flow', Qs.stringify({
+                    id: util.getParams('id'),
+                    flow: 'flow3',
+                    progress: 5,
+                    data: self.form
+                }),{
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).then(function(resp) {
+                    if (resp.data.ret) {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'success',
+                            callback: function () {
+                                history.go(-1);
+                            }
+                        });
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            },
+            delDevice: function (index) {
+                this.form.device.splice(index, 1);
+            },
+            addDevice: function () {
+                this.form.device.push({
+                    code: '',
+                    name: '',
+                    type: '',
+                    number: '',
+                    use: ''
+                })
+            }
+        }
+    })
+</script>
+{/block}

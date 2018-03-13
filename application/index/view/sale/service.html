@@ -1,0 +1,189 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .sale-service .icon-jia {
+        font-size: 28px;
+        color: #04be02;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .icon-jian {
+        font-size: 28px;
+        color: #ef4f4f;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .yd-flexbox {
+        border-bottom: 10px solid #F4F3F4;
+    }
+
+    .sale-service .yd-cell:after {
+        border-bottom: none;
+    }
+
+    .sale-service .btn-add {
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+    }
+
+    .sale-service .btn-add .yd-btn-block {
+        margin-top: 0;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-service" v-cloak>
+
+    <div class="ui-title">服务内容</div>
+
+    <yd-cell-group>
+
+        <yd-cell-item arrow type="label">
+            <span slot="left">服务类型：</span>
+            <input slot="right" v-model="form.type" type="text" @click.stop="visible = true" readonly
+                   placeholder="请选择服务类型">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">单位数量：</span>
+            <input slot="right" v-model="form.number" type="number" placeholder="请输入技术支持单位数量">
+        </yd-cell-item>
+
+        <yd-flexbox v-for="(item, index) in form.device">
+            <yd-flexbox-item>
+                <yd-cell-item>
+                    <span slot="left">设备名称：</span>
+                    <input slot="right" v-model="item.name" type="text" placeholder="请输入问题设备名称">
+                </yd-cell-item>
+
+                <yd-cell-item>
+                    <span slot="left">设备数量：</span>
+                    <input slot="right" v-model="item.number" type="number" placeholder="请输入问题设备数量">
+                </yd-cell-item>
+            </yd-flexbox-item>
+
+            <div>
+                <i @click="delDevice(index)" v-show="(index+1) < form.device.length" class="iconfont icon-jian"></i>
+                <i @click="addDevice" v-show="(index+1) == form.device.length" class="iconfont icon-jia"></i>
+            </div>
+        </yd-flexbox>
+
+        <yd-cell-item>
+            <yd-textarea slot="right" v-model="form.remark" placeholder="请输入备注说明" maxlength="100"></yd-textarea>
+        </yd-cell-item>
+
+    </yd-cell-group>
+
+    <yd-popup v-model="visible" position="bottom" height="auto">
+        <yd-cell-group title="请选择服务类型">
+            <yd-cell-item type="checkbox" v-for="(item, index) in serviceType">
+                <span slot="left">{{item.name}}</span>
+                <input slot="right" type="checkbox" :value="item.name" v-model="form.type"/>
+            </yd-cell-item>
+        </yd-cell-group>
+        <div class="btn-add">
+            <yd-button type="primary" size="large" @click.native="visible = false">确定</yd-button>
+        </div>
+    </yd-popup>
+
+    <div style="padding: 0 15px;">
+        <yd-button size="large" @click.native="save" type="primary">下一步</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            form: {
+                type: [], // 服务类型
+                number: '', // 技术支持单位数量
+                device: [{
+                    name: '', // 问题设备名称
+                    number: '' // 问题设备数量
+                }],
+                remark: '' // 备注
+
+            },
+            visible: false,
+            serviceType: []
+        },
+        created: function () {
+            this.getServiceType();
+        },
+        methods: {
+            getServiceType: function () {
+                var self = this;
+                axios.get('/api/Service_Type/get', {
+                    params: {}
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.serviceType = resp.data.data;
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            },
+            save: function () {
+                if (this.form.type.length === 0 || !this.form.number || !this.form.remark) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+                var i = 0;
+                var checkDevice = false;
+                for (i; i < this.form.device.length; i++) {
+                    if (!this.form.device[i].name || !this.form.device[i].number) {
+                        checkDevice = true;
+                        break;
+                    }
+                }
+                if (checkDevice) {
+                    this.$dialog.toast({
+                        mes: '请填写设备信息',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var extend = function (o, n) {
+                    for (var p in n) {
+                        if (n.hasOwnProperty(p) && (!o.hasOwnProperty(p) ))
+                            o[p] = n[p];
+                    }
+                };
+
+                var formData = JSON.parse(localStorage.getItem('applyFormData'));
+                extend(formData, this.form);
+                localStorage.setItem('applyFormData', JSON.stringify(formData));
+
+                location.href = '/index/sale/charge';
+            },
+            delDevice: function (index) {
+                this.form.device.splice(index, 1);
+            },
+            addDevice: function () {
+                this.form.device.push({
+                    name: '',
+                    number: ''
+                })
+            }
+        }
+    })
+</script>
+{/block}

@@ -1,0 +1,172 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .ui-title {
+        color: #666666;
+        font-size: 30px;
+        padding: 30px 0;
+        text-align: center;
+    }
+    .sale-customer .icon-jia{
+        font-size: 28px;
+        color: #04be02;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+    .sale-customer .icon-jian{
+        font-size: 28px;
+        color: #ef4f4f;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+    .sale-customer .yd-flexbox{
+        border-bottom: 10px solid #F4F3F4;
+    }
+    .sale-customer .yd-cell:after{
+        border-bottom: none;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-customer" v-cloak>
+
+    <div class="ui-title">客户信息</div>
+
+    <yd-cell-group>
+
+        <yd-cell-item>
+            <span slot="left">销售单号：</span>
+            <input slot="right" v-model="form.code" type="text" placeholder="请输入销售单号">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">客户名称：</span>
+            <input slot="right" v-model="form.customer" type="text" placeholder="请输入客户名称">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">单位名称：</span>
+            <input slot="right" v-model="form.company" type="text" placeholder="请输入单位名称">
+        </yd-cell-item>
+
+        <yd-cell-item arrow>
+            <span slot="left">前往地点：</span>
+            <input slot="right" v-model="form.place" type="text" @click.stop="visible = true" readonly placeholder="请选择前往地点">
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <span slot="left">详细地址：</span>
+            <input slot="right" v-model="form.address" type="text" placeholder="请输入详细地址">
+        </yd-cell-item>
+
+        <yd-flexbox v-for="(item, index) in form.contact">
+            <yd-flexbox-item>
+                <yd-cell-item>
+                    <span slot="left">联系人   ：</span>
+                    <input slot="right" v-model="item.name" type="text" placeholder="请输入联系人">
+                </yd-cell-item>
+
+                <yd-cell-item>
+                    <span slot="left">联系方式：</span>
+                    <input slot="right" v-model="item.tel" type="number" placeholder="请输入联系方式">
+                </yd-cell-item>
+            </yd-flexbox-item>
+
+            <div>
+                <i @click="delContact(index)" v-show="(index+1) < form.contact.length" class="iconfont icon-jian"></i>
+                <i @click="addContact" v-show="(index+1) == form.contact.length" class="iconfont icon-jia"></i>
+            </div>
+        </yd-flexbox>
+
+    </yd-cell-group>
+
+    <yd-cityselect
+        v-model="visible"
+        ref="cityselectDemo"
+        :callback="citySelectResult"
+        :items="district"
+        ></yd-cityselect>
+
+    <div style="padding: 0 15px;">
+        <yd-button size="large" @click.native="save" type="primary">下一步</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script src="/mobile/lib/ydui/cityselect/index.js"></script>
+<script src="/mobile/lib/ydui/cityselect/gov_province_city_area_id.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            form: {
+                code: '', // 销售单号
+                customer: '', // 客户名称
+                company: '', // 单位名称
+                place: '', // 前往地点
+                address: '', // 详细地址
+                contact: [{
+                    name: '', // 联系人
+                    tel: '' // 联系方式
+                }]
+            },
+            visible: false,
+            district: YDUI_DISTRICT
+        },
+        created: function () {
+
+        },
+        methods: {
+            save: function () {
+                console.log(this.form);
+
+                if (!this.form.code || !this.form.customer || !this.form.company || !this.form.place || !this.form.address) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var i = 0;
+                var check = false;
+                for (i; i < this.form.contact.length; i++) {
+                    if (!this.form.contact[i].name || !this.form.contact[i].tel) {
+                        check = true;
+                        break;
+                    }
+                }
+                if (check) {
+                    this.$dialog.toast({
+                        mes: '请填写联系信息',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                localStorage.setItem('applyFormData', JSON.stringify(this.form));
+
+                location.href = '/index/sale/service';
+            },
+            delContact: function (index) {
+                this.form.contact.splice(index, 1);
+            },
+            addContact: function () {
+                this.form.contact.push({
+                    name: '',
+                    tel: ''
+                })
+            },
+            citySelectResult: function(resp) {
+                this.form.place = resp.itemName1 + ' ' + resp.itemName2 + ' ' + resp.itemName3;
+            }
+        }
+    })
+</script>
+{/block}

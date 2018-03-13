@@ -1,0 +1,125 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .support-log{
+        padding-bottom: 90px;
+    }
+    .support-log .yd-preview{
+        border-bottom: 10px solid #f5f5f5;
+    }
+    .support-log .btn-add{
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+        background-color: #ffffff;
+        z-index: 1000;
+    }
+    .support-log .btn-add .yd-btn-block{
+        margin-top: 0;
+    }
+    .support-log .icon-guanbijiantou{
+        position: absolute;
+        bottom: 100px;
+        right: 24px;
+        color: #999999;
+        font-size: 20px;
+    }
+</style>
+{/block}
+
+{block name="content"}
+    <div id="app" class="support-log" v-cloak>
+        <yd-infinitescroll :callback="getData" ref="infinitescroll">
+            <yd-preview slot="list" v-for="(item, index) in listData" :key="index" :buttons="[]">
+                <yd-preview-header>
+                    <div slot="left">单位名称</div>
+                    <div slot="right">{{item.company}}</div>
+                </yd-preview-header>
+
+                <yd-preview-item>
+                    <div slot="left">工作类型</div>
+                    <div slot="right">{{item.type}}</div>
+                </yd-preview-item>
+
+                <yd-preview-item>
+                    <div slot="left">创建时间</div>
+                    <div slot="right">{{item.create}}</div>
+                </yd-preview-item>
+
+                <yd-preview-item>
+                    <div slot="left">工作描述</div>
+                    <div slot="right">{{item.description}}</div>
+                </yd-preview-item>
+
+                <yd-preview-item>
+                    <div slot="left">完成状态</div>
+                    <div slot="right">
+                        <span v-if="item.status == 1">未开始</span>
+                        <span v-if="item.status == 2">进行中</span>
+                        <span v-if="item.status == 3">已完成</span>
+                    </div>
+                </yd-preview-item>
+            </yd-preview>
+
+            <!-- 数据全部加载完毕显示 -->
+            <span slot="doneTip">没有数据</span>
+            <!-- 加载中提示，不指定，将显示默认加载中图标 -->
+            <img slot="loadingTip" src="http://static.ydcss.com/uploads/ydui/loading/loading10.svg"/>
+        </yd-infinitescroll>
+
+    </div>
+{/block}
+
+{block name="footer"}
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            pn: 1,
+            ps: 15,
+            listData: [],
+
+            userInfo: null,
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function(){
+                ding.getUserInfo(function(resp){
+                    self.userInfo = resp.data;
+                    self.getData();
+                });
+            });
+        },
+        methods: {
+            getData: function() {
+                var self = this;
+                axios.get('/api/log/get', {
+                    params: {
+                        invoiceId: util.getParams('invoiceId'),
+                        userId: self.userInfo.userid,
+                        pn: self.pn
+                    }
+                }).then(function (resp) {
+                    var _list = resp.data.data;
+
+                    self.listData = self.listData.concat(_list);
+
+                    if (_list.length < self.ps) {
+                        self.$refs.infinitescroll.$emit('ydui.infinitescroll.loadedDone');
+                        return;
+                    }
+                    /* 单次请求数据完毕 */
+                    self.$refs.infinitescroll.$emit('ydui.infinitescroll.finishLoad');
+                    self.pn++;
+                });
+            }
+        }
+    })
+</script>
+{/block}

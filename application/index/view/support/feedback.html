@@ -1,0 +1,94 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .support-feedback .btn-add {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+        background-color: #ffffff;
+        z-index: 1000;
+    }
+
+    .support-feedback .btn-add .yd-btn-block {
+        margin-top: 0;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="support-feedback" v-cloak>
+
+    <yd-cell-group>
+
+        <yd-cell-item arrow type="label">
+            <select slot="right" v-model="form.type">
+                <option value="">请选择类型</option>
+                <option value="技术问题">技术问题</option>
+                <option value="管理问题">管理问题</option>
+            </select>
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <yd-textarea slot="right" v-model="form.description" placeholder="请输入描述" maxlength="100"></yd-textarea>
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <yd-textarea slot="right" v-model="form.suggest" placeholder="请输入个人建议" maxlength="100"></yd-textarea>
+        </yd-cell-item>
+
+    </yd-cell-group>
+
+    <div class="btn-add">
+        <yd-button type="primary" size="large" @click.native="submit">提交</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            form: {
+                type: '',
+                description: '',
+                suggest: ''
+            }
+        },
+        created: function () {
+            ding.ready(function(){
+                ding.getUserInfo(function(resp){
+                    self.userInfo = resp.data;
+                });
+            });
+        },
+        methods: {
+            submit: function () {
+                var self = this;
+                axios.get('/api/feedback/create', {
+                    params: self.form
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.$dialog.toast({
+                            mes: '成功',
+                            timeout: 1500,
+                            icon: 'success'
+                        });
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            }
+        }
+    })
+</script>
+{/block}

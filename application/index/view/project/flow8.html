@@ -1,0 +1,195 @@
+{extend name="layout" /}
+
+{block name="head"}
+<style>
+    .sale-service .icon-jia {
+        font-size: 28px;
+        color: #04be02;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .icon-jian {
+        font-size: 28px;
+        color: #ef4f4f;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+
+    .sale-service .yd-flexbox {
+        border-bottom: 10px solid #F4F3F4;
+    }
+
+    .sale-service .yd-cell:after {
+        border-bottom: none;
+    }
+
+    .sale-service .btn-add {
+        padding: 10px;
+        border-top: 1px solid #e8e8e8;
+    }
+
+    .sale-service .btn-add .yd-btn-block {
+        margin-top: 0;
+    }
+
+    .el-upload{
+        position: relative;
+        width: 200px;
+        height: 120px;
+        margin: 0 auto 30px auto;
+        background-color: #fff;
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+        border: 1px solid #e8e8e8;
+        border-radius: 4px;
+        line-height: 120px;
+        text-align: center;
+        font-size: 20px;
+        color: #999999;
+    }
+    .el-upload .upload-input{
+        position: absolute;
+        top:0;
+        left:0;
+        right:0;
+        bottom:0;
+        opacity: 0;
+    }
+</style>
+{/block}
+
+{block name="content"}
+<div id="app" class="sale-service" v-cloak style="overflow: hidden;">
+
+    <div class="ui-title">确定返程日期</div>
+
+    <div id="container" class="el-upload" :style="{'background-image': 'url('+ form.url +')'}">
+        <p v-if="!form.url">上传车票</p>
+        <input type="file" class="upload-input" id="btnupload" name="img"/>
+    </div>
+
+    <yd-cell-group>
+
+        <yd-cell-item>
+            <span slot="left">出发日期：</span>
+            <yd-datetime type="datetime" v-model="form.date" :start-date="util.getTime()" :disabled="isDone" slot="right"></yd-datetime>
+        </yd-cell-item>
+
+        <yd-cell-item>
+            <yd-textarea slot="right" :disabled="isDone" v-model="form.remark" placeholder="请输入备注说明" maxlength="100"></yd-textarea>
+        </yd-cell-item>
+
+    </yd-cell-group>
+
+    <div style="padding: 0 15px;" v-if="!isDone && userInfo.auth == 2">
+        <yd-button size="large" @click.native="save" type="primary">保存</yd-button>
+    </div>
+
+</div>
+{/block}
+
+{block name="footer"}
+<script src="//cdn.staticfile.org/plupload/2.1.9/plupload.full.min.js"></script>
+<script src="//cdn.staticfile.org/qiniu-js-sdk/1.0.14-beta/qiniu.min.js"></script>
+<script src="/mobile/js/qiniu.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            userInfo: {},
+            isDone: util.getParams('done') && 'disabled',
+            form: {
+                url: '',
+                date: '',
+                remark: ''
+            }
+        },
+        created: function () {
+            var self = this;
+
+            ding.ready(function () {
+                ding.getUserInfo(function (resp) {
+                    self.userInfo = resp.data;
+                });
+            });
+
+            if (self.isDone) {
+                self.getProjectDetail();
+            }
+        },
+        mounted: function () {
+            var self = this;
+            QiniuInit(function (resp) {
+                self.form.url = resp.data.url;
+            });
+        },
+        methods: {
+            getProjectDetail: function () {
+                var self = this;
+                axios.get('/api/invoice/getInfo', {
+                    params: {
+                        id: util.getParams('id')
+                    }
+                }).then(function (resp) {
+                    if (resp.data.ret) {
+                        self.form = resp.data.data.flow8;
+                    }else{
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                });
+            },
+            save: function () {
+                if (!this.form.url || !this.form.remark) {
+                    this.$dialog.toast({
+                        mes: '请完整填写内容',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+                if (!this.form.date) {
+                    this.$dialog.toast({
+                        mes: '请输入车票日期信息',
+                        timeout: 1500,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                var self = this;
+                axios.post('/api/invoice/flow', Qs.stringify({
+                    id: util.getParams('id'),
+                    flow: 'flow8',
+                    progress: 11,
+                    data: self.form
+                }),{
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).then(function(resp) {
+                    if (resp.data.ret) {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'success',
+                            callback: function () {
+                                history.go(-1);
+                            }
+                        });
+                    } else {
+                        self.$dialog.toast({
+                            mes: resp.data.msg,
+                            timeout: 1500,
+                            icon: 'error'
+                        });
+                    }
+                })
+            }
+        }
+    })
+</script>
+{/block}
